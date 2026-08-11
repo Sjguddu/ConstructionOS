@@ -1,32 +1,55 @@
 (()=>{
-  const KEY='constructionos_civil_calc_history';
-  const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  const num=v=>Number(v)||0;
-  const fmt=v=>Number.isFinite(v)?Number(v.toFixed(4)).toLocaleString('en-IN',{maximumFractionDigits:4}):'—';
+  const KEY='constructionos_calc_history';
   const read=()=>{try{return JSON.parse(localStorage.getItem(KEY))||[]}catch{return[]}};
   const write=x=>localStorage.setItem(KEY,JSON.stringify(x.slice(0,100)));
-  const saveHistory=(name,input,result,unit)=>{const h=read();h.unshift({id:Date.now(),name,input,result,unit,time:new Date().toLocaleString('en-IN')});write(h);renderHistory();};
-  let root=null,active='earthwork',historyOpen=false;
-  const field=(label,key,unit='')=>`<label class="cc-field"><span>${label}${unit?` <em>${unit}</em>`:''}</span><input data-k="${key}" type="number" step="any" min="0" inputmode="decimal" placeholder="0"></label>`;
-  const tabs=[['earthwork','Earthwork'],['concrete','Concrete'],['steel','Rebar / Steel'],['brick','Brickwork'],['convert','Unit Convert'],['percent','Percentage']];
-  const shell=()=>`<div class="cc-head"><div><small>CIVIL ENGINEERING QUICK TOOL</small><h3>Construction Calculator</h3><p>Live quantity calculation • keyboard enabled • history saved locally</p></div><button class="cc-x" data-close>×</button></div><div class="cc-tabs">${tabs.map(([id,t])=>`<button class="cc-tab ${active===id?'on':''}" data-tab="${id}">${t}</button>`)}</div><div id="cc-body"></div><div class="cc-history-head"><strong>Calculation History</strong><button data-history>${historyOpen?'Hide':'Show'} history (${read().length})</button></div><div id="cc-history" class="cc-history ${historyOpen?'show':''}"></div>`;
-  const result=(label,value,unit)=>`<div class="cc-result"><span>${label}</span><strong>${fmt(value)} ${unit||''}</strong></div>`;
-  const renderBody=()=>{const b=root.querySelector('#cc-body');if(!b)return;
-    if(active==='earthwork')b.innerHTML=`<div class="cc-grid">${field('Length','l','m')}${field('Width','w','m')}${field('Depth / Height','d','m')}</div><div class="cc-live">${result('Excavation / fill volume',numVal('l')*numVal('w')*numVal('d'),'m³')}</div><div class="cc-actions"><button data-record="Earthwork">Record calculation</button><button data-clear>Clear</button></div>`;
-    if(active==='concrete')b.innerHTML=`<div class="cc-grid">${field('Length','l','m')}${field('Width','w','m')}${field('Depth','d','m')}${field('Dry volume factor','factor','×')}</div><div class="cc-grid cc-ratio">${field('Cement ratio','c','part')}${field('Sand ratio','s','part')}${field('Aggregate ratio','a','part')}</div><div class="cc-live" id="concrete-live"></div><div class="cc-note">Dry volume factor defaults to <b>1.54</b>. Change it if your project specification requires another factor.</div><div class="cc-actions"><button data-record="Concrete">Record calculation</button><button data-clear>Clear</button></div>`;
-    if(active==='steel')b.innerHTML=`<div class="cc-grid">${field('Bar diameter','dia','mm')}${field('Bar length','len','m')}${field('Number of bars','bars','Nos')}${field('Lap / wastage','waste','%')}</div><div class="cc-size-row"><label class="cc-field"><span>Standard / custom bar size</span><select data-k="preset"><option value="">Enter diameter above</option><option value="6">6 mm</option><option value="8">8 mm</option><option value="10">10 mm</option><option value="12">12 mm</option><option value="16">16 mm</option><option value="20">20 mm</option><option value="25">25 mm</option><option value="32">32 mm</option><option value="40">40 mm</option></select></label><div class="cc-mini">Unit weight = D² / 162 kg/m</div></div><div class="cc-live" id="steel-live"></div><div class="cc-actions"><button data-record="Rebar / Steel">Record calculation</button><button data-clear>Clear</button></div>`;
-    if(active==='brick')b.innerHTML=`<div class="cc-subtitle">Enter the standard brick size you actually use. Nothing is hard-coded.</div><div class="cc-grid">${field('Wall length','wl','m')}${field('Wall height','wh','m')}${field('Wall thickness','wt','m')}${field('Brick length','bl','mm')}${field('Brick width','bw','mm')}${field('Brick height','bh','mm')}${field('Mortar joint','joint','mm')}${field('Wastage','waste','%')}</div><div class="cc-live" id="brick-live"></div><div class="cc-actions"><button data-record="Brickwork">Record calculation</button><button data-clear>Clear</button></div>`;
-    if(active==='convert')b.innerHTML=`<div class="cc-grid"><label class="cc-field"><span>From</span><select data-k="from"><option>m</option><option>mm</option><option>cm</option><option>km</option><option>ft</option><option>in</option><option>yd</option><option>m²</option><option>ft²</option><option>m³</option><option>ft³</option><option>kg</option><option>t</option><option>L</option></select></label>${field('Value','value')}<label class="cc-field"><span>To</span><select data-k="to"><option>m</option><option>mm</option><option>cm</option><option>km</option><option>ft</option><option>in</option><option>yd</option><option>m²</option><option>ft²</option><option>m³</option><option>ft³</option><option>kg</option><option>t</option><option>L</option></select></label></div><div class="cc-live" id="convert-live">Enter a value.</div><div class="cc-actions"><button data-record="Unit Conversion">Record calculation</button><button data-clear>Clear</button></div>`;
-    if(active==='percent')b.innerHTML=`<div class="cc-grid">${field('Value','value')}${field('Percentage','percent','%')}</div><div class="cc-live">${result('Percentage value',numVal('value')*numVal('percent')/100)}</div><div class="cc-actions"><button data-record="Percentage">Record calculation</button><button data-clear>Clear</button></div>`;
-    renderLive();
+  const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const fmt=n=>Number.isFinite(n)?Number(n.toFixed(10)).toLocaleString('en-IN',{maximumFractionDigits:10}):'Error';
+  const evaluate=expr=>{try{const clean=expr.replace(/×/g,'*').replace(/÷/g,'/').replace(/%/g,'/100');if(!/^[0-9+\-*/().\s]+$/.test(clean))return null;const v=Function('"use strict";return ('+clean+')')();return Number.isFinite(v)?v:null}catch{return null}};
+  const enhance=()=>{
+    const calc=document.querySelector('.calculator');
+    if(!calc||calc.dataset.normalized==='1')return;
+    calc.dataset.normalized='1';
+    calc.innerHTML=`<div class="calc-head"><div><small>QUICK TOOL</small><h3>Calculator</h3><p>Simple calculator with keyboard & numpad support</p></div><button type="button" data-close>×</button></div><div class="calc-display" data-display>0</div><div class="calc-keys">${['C','⌫','%','÷','7','8','9','×','4','5','6','−','1','2','3','+','±','0','.','='].map(k=>`<button type="button" data-key="${k}" class="${['÷','×','−','+','='].includes(k)?'operator':''}">${k}</button>`).join('')}</div><div class="calc-history-bar"><strong>History</strong><button type="button" data-toggle-history>Show (${read().length})</button></div><div class="calc-history-list" data-history></div><p class="calc-hint">Keyboard: 0–9 · Numpad · Enter = result · Esc = close · Backspace</p>`;
+    let expr='';let justSolved=false;
+    const display=calc.querySelector('[data-display]');
+    const render=()=>display.textContent=expr||'0';
+    const history=calc.querySelector('[data-history]');
+    const renderHistory=()=>{const h=read();history.innerHTML=h.length?h.map(x=>`<div class="calc-history-row"><span>${esc(x.expression)}</span><b>${esc(x.result)}</b></div>`).join(''):'<div class="calc-empty">No calculation history.</div>'};
+    const save=()=>{if(!expr)return;const v=evaluate(expr);if(v===null)return;const h=read();h.unshift({id:Date.now(),expression:expr,result:fmt(v),time:new Date().toLocaleString('en-IN')});write(h);renderHistory();calc.querySelector('[data-toggle-history]').textContent=`Show (${h.length})`};
+    const press=k=>{
+      if(k==='C'){expr='';justSolved=false;render();return}
+      if(k==='⌫'){expr=expr.slice(0,-1);justSolved=false;render();return}
+      if(k==='±'){if(expr&&/^-?\d+(\.\d+)?$/.test(expr))expr=expr.startsWith('-')?expr.slice(1):'-'+expr;render();return}
+      if(k==='='){const v=evaluate(expr);if(v===null){display.textContent='Error';expr='';justSolved=true;return}save();expr=String(v);justSolved=true;render();return}
+      if(justSolved&&/^[0-9.]$/.test(k)){expr='';justSolved=false}
+      if(k==='−')k='-';
+      if(k==='×')k='×';
+      if(k==='÷')k='÷';
+      expr+=k;render();
+    };
+    calc.querySelectorAll('[data-key]').forEach(b=>b.addEventListener('click',()=>press(b.dataset.key)));
+    calc.querySelector('[data-close]').addEventListener('click',()=>window.__ccClose?.());
+    calc.querySelector('[data-toggle-history]').addEventListener('click',()=>{const show=history.classList.toggle('show');if(show)renderHistory();calc.querySelector('[data-toggle-history]').textContent=`${show?'Hide':'Show'} (${read().length})`});
+    const key=e=>{
+      if(!document.body.contains(calc)){window.removeEventListener('keydown',key);return}
+      if(e.key==='Escape'){window.__ccClose?.();return}
+      if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName))return;
+      let k=null;
+      if(/^[0-9]$/.test(e.key))k=e.key;
+      else if(e.key==='.')k='.';
+      else if(e.key==='+')k='+';
+      else if(e.key==='-')k='−';
+      else if(e.key==='*')k='×';
+      else if(e.key==='/')k='÷';
+      else if(e.key==='%')k='%';
+      else if(e.key==='Enter'||e.key==='=')k='=';
+      else if(e.key==='Backspace')k='⌫';
+      else if(e.key==='Delete')k='C';
+      if(k){e.preventDefault();press(k)}
+    };
+    window.addEventListener('keydown',key);
+    renderHistory();
   };
-  const numVal=k=>num(root?.querySelector(`[data-k="${k}"]`)?.value);
-  const convertFactor={m:1,mm:.001,cm:.01,km:1000,ft:.3048,in:.0254,yd:.9144};
-  const convert=v=>{const from=root.querySelector('[data-k="from"]')?.value,to=root.querySelector('[data-k="to"]')?.value;if(!v)return 0;if(['m','mm','cm','km','ft','in','yd'].includes(from)&&['m','mm','cm','km','ft','in','yd'].includes(to))return v*convertFactor[from]/convertFactor[to];if((from==='m²'||from==='ft²')&&(to==='m²'||to==='ft²')){const base=from==='m²'?v:v*.09290304;return to==='m²'?base:base/0.09290304}if((from==='m³'||from==='ft³')&&(to==='m³'||to==='ft³')){const base=from==='m³'?v:v*.028316846592;return to==='m³'?base:base/.028316846592}if((from==='kg'||from==='t')&&(to==='kg'||to==='t')){const base=from==='kg'?v:v*1000;return to==='kg'?base:base/1000}if(from==='L'&&to==='L')return v;return NaN};
-  const renderLive=()=>{if(!root)return;const live=root.querySelector('.cc-live');if(active==='earthwork'&&live)live.innerHTML=result('Excavation / fill volume',numVal('l')*numVal('w')*numVal('d'),'m³');if(active==='concrete'){const wet=numVal('l')*numVal('w')*numVal('d'),factor=numVal('factor')||1.54,c=numVal('c'),s=numVal('s'),a=numVal('a'),sum=c+s+a;const dry=wet*factor,cement=sum?dry*c/sum:0,sand=sum?dry*s/sum:0,agg=sum?dry*a/sum:0;const el=root.querySelector('#concrete-live');if(el)el.innerHTML=`${result('Wet volume',wet,'m³')}<div class="cc-output-grid">${result('Dry volume',dry,'m³')}${result('Cement',cement,'m³')}${result('Cement bags',cement*1440/50,'bags')}${result('Sand',sand,'m³')}${result('Aggregate',agg,'m³')}</div>`}if(active==='steel'){const dia=numVal('dia'),len=numVal('len'),bars=numVal('bars'),waste=numVal('waste'),uw=dia*dia/162,total=len*bars*uw*(1+waste/100),el=root.querySelector('#steel-live');if(el)el.innerHTML=`${result('Unit weight',uw,'kg/m')}<div class="cc-output-grid">${result('Total bar length',len*bars,'m')}${result('Steel quantity',total,'kg')}${result('Steel quantity',total/1000,'tonne')}</div>`}if(active==='brick'){const area=numVal('wl')*numVal('wh'),th=numVal('wt'),bl=(numVal('bl')+numVal('joint'))/1000,bw=(numVal('bw')+numVal('joint'))/1000,bh=(numVal('bh')+numVal('joint'))/1000,brickVol=bl*bw*bh,wallVol=area*th,base=brickVol?wallVol/brickVol:0,qty=base*(1+numVal('waste')/100),el=root.querySelector('#brick-live');if(el)el.innerHTML=`${result('Wall volume',wallVol,'m³')}<div class="cc-output-grid">${result('Brick volume with joint',brickVol,'m³')}${result('Brick quantity',qty,'Nos')}</div><div class="cc-note">Brick quantity updates immediately when you change the wall or your own standard brick size.</div>`}if(active==='convert'){const v=numVal('value'),el=root.querySelector('#convert-live');if(el)el.innerHTML=`${result('Converted value',convert(v),root.querySelector('[data-k="to"]')?.value||'')}`}if(active==='percent'&&live)live.innerHTML=result('Percentage value',numVal('value')*numVal('percent')/100)};
-  const clear=()=>{root.querySelectorAll('input').forEach(i=>i.value='');root.querySelectorAll('select').forEach(s=>{if(s.dataset.k==='preset')s.value='';});renderLive()};
-  const renderHistory=()=>{const el=root?.querySelector('#cc-history');if(!el)return;el.innerHTML=historyOpen?read().map(h=>`<div class="cc-history-row"><div><strong>${esc(h.name)}</strong><small>${esc(h.time)} · ${esc(h.input)}</small></div><b>${esc(fmt(h.result))} ${esc(h.unit||'')}</b></div>`).join('')||'<div class="cc-empty">No calculations recorded yet.</div>':''};
-  const currentInput=()=>{const vals=[...root.querySelectorAll('[data-k]')].filter(x=>x.value!==''&&x.dataset.k!=='preset').map(x=>`${x.dataset.k}=${x.value}`).join(', ');return vals||'No inputs'};
-  const currentResult=()=>{if(active==='earthwork')return {v:numVal('l')*numVal('w')*numVal('d'),u:'m³'};if(active==='concrete'){const wet=numVal('l')*numVal('w')*numVal('d'),dry=wet*(numVal('factor')||1.54);return {v:dry,u:'m³ dry concrete'}}if(active==='steel'){const d=numVal('dia'),total=numVal('len')*numVal('bars')*(d*d/162)*(1+numVal('waste')/100);return {v:total,u:'kg'}}if(active==='brick'){const bl=(numVal('bl')+numVal('joint'))/1000,bw=(numVal('bw')+numVal('joint'))/1000,bh=(numVal('bh')+numVal('joint'))/1000;return {v:(numVal('wl')*numVal('wh')*numVal('wt'))/(bl*bw*bh)*(1+numVal('waste')/100),u:'Nos'}}if(active==='convert')return {v:convert(numVal('value')),u:root.querySelector('[data-k="to"]')?.value};return {v:numVal('value')*numVal('percent')/100,u:''}};
-  const render=()=>{root.innerHTML=shell();renderBody();renderHistory();root.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{active=b.dataset.tab;render()});root.querySelector('[data-history]').onclick=()=>{historyOpen=!historyOpen;renderHistory();root.querySelector('[data-history]').textContent=`${historyOpen?'Hide':'Show'} history (${read().length})`};root.querySelector('[data-close]').onclick=()=>window.__ccClose?.();root.addEventListener('input',renderLive);root.addEventListener('change',e=>{if(e.target.dataset.k==='preset'&&e.target.value){const d=root.querySelector('[data-k="dia"]');if(d)d.value=e.target.value}renderLive()});root.addEventListener('click',e=>{if(e.target.matches('[data-clear]'))clear();if(e.target.matches('[data-record]')){const r=currentResult();saveHistory(e.target.dataset.record,currentInput(),r.v,r.u)}})};
-  const enhance=()=>{const c=document.querySelector('.calculator');if(!c||c.dataset.civilEnhanced)return; c.dataset.civilEnhanced='1';root=c;window.__ccClose=()=>document.querySelector('.calculator-backdrop')?.remove();render();const key=e=>{if(!root||!document.body.contains(root))return;if(e.key==='Escape'){window.__ccClose();return}if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName))return;const allowed=/^[0-9+\-*/().%]$/.test(e.key)||['Enter','Backspace','Delete'].includes(e.key);if(!allowed)return;e.preventDefault();if(active!=='earthwork'&&active!=='concrete'&&active!=='steel'&&active!=='brick'&&active!=='convert'&&active!=='percent')return;const inputs=[...root.querySelectorAll('input[data-k]')];let i=root.dataset.kIndex?Number(root.dataset.kIndex):0;if(/^[0-9.]$/.test(e.key)||e.key==='-'){const target=inputs[i]||inputs[0];if(target){target.focus();target.value=(target.value||'')+e.key;target.dispatchEvent(new Event('input',{bubbles:true}))}}};window.addEventListener('keydown',key);};new MutationObserver(enhance).observe(document.body,{childList:true,subtree:true});enhance();})();
+  new MutationObserver(enhance).observe(document.body,{childList:true,subtree:true});
+  enhance();
+})();
